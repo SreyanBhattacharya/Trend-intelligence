@@ -1,0 +1,14 @@
+platform_settings:
+  data_collection:
+    reddit_subreddits: ["technology", "programming", "marketing", "startups"]
+    twitter_keywords: ["AI", "machine learning", "crypto", "trend"]
+  
+  thresholds:
+    trend_score_alert_threshold: 80
+    virality_probability_alert_threshold: 0.70
+
+  scheduling:
+    reddit_scan_interval_minutes: 10
+    twitter_scan_interval_minutes: 5
+    google_trends_scan_interval_minutes: 60
+    pipeline_process_interval_minutes: 15

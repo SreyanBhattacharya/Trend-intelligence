@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: trend_user
+      POSTGRES_PASSWORD: trend_password
+      POSTGRES_DB: trend_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trend_user -d trend_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  scheduler:
+    build: .
+    command: celery -A workflows.pipeline beat --loglevel=info
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env.example
+    environment:
+      - DATABASE_URL=postgresql://trend_user:trend_password@db:5432/trend_db
+      - REDIS_URL=redis://redis:6379/0
+
+  worker:
+    build: .
+    command: celery -A workflows.pipeline worker --loglevel=info
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env.example
+    environment:
+      - DATABASE_URL=postgresql://trend_user:trend_password@db:5432/trend_db
+      - REDIS_URL=redis://redis:6379/0
+
+volumes:
+  db_data:
