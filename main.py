@@ -5,6 +5,7 @@
     python main.py run-once           collect from every source, then run the full pipeline once
     python main.py schedule           run continuously with the built-in scheduler (no Celery needed)
     python main.py report             show the current top trends
+    python main.py web                dashboard on http://localhost:8000
 """
 import argparse
 import logging
@@ -24,7 +25,7 @@ def cmd_init_db(_args):
 def cmd_collect(args):
     from workflows.pipeline import collect
 
-    print(collect(args.source))
+    print(collect(args.source, trigger="manual"))
 
 
 def cmd_run_once(args):
@@ -36,8 +37,8 @@ def cmd_run_once(args):
         import os
 
         os.environ["DEMO_MODE"] = "true"
-    print("Collected:", collect("all"))
-    print("Pipeline:", run_pipeline())
+    print("Collected:", collect("all", trigger="manual"))
+    print("Pipeline:", run_pipeline(trigger="manual"))
 
 
 def cmd_schedule(_args):
@@ -72,6 +73,16 @@ def cmd_report(args):
               f"{r['estimated_lifespan_days']:4d} {r['alerts']:6d}")
 
 
+def cmd_web(args):
+    import uvicorn
+
+    from database.db_connection import init_db
+
+    init_db()
+    print(f"Dashboard: http://localhost:{args.port}")
+    uvicorn.run("api.server:app", host=args.host, port=args.port)
+
+
 def main(argv=None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     parser = argparse.ArgumentParser(description="Trend Intelligence Platform")
@@ -93,6 +104,11 @@ def main(argv=None):
     p = sub.add_parser("report", help="print the top active trends")
     p.add_argument("--limit", type=int, default=20)
     p.set_defaults(func=cmd_report)
+
+    p = sub.add_parser("web", help="serve the dashboard")
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--port", type=int, default=8000)
+    p.set_defaults(func=cmd_web)
 
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

@@ -122,3 +122,16 @@ CREATE TABLE IF NOT EXISTS alerts (
     channels_sent TEXT[], -- e.g. ['slack', 'discord', 'email', 'console']
     alert_type VARCHAR(100)
 );
+
+-- One row per collection / pipeline run (shown on the dashboard's Pipeline page).
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    id SERIAL PRIMARY KEY,
+    task VARCHAR(50) NOT NULL,
+    trigger VARCHAR(20) DEFAULT 'schedule',
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    finished_at TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(20) DEFAULT 'running',
+    summary JSONB,
+    error TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_started ON pipeline_runs (started_at DESC);

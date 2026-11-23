@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trend Intel · Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23111210'/%3E%3Cpath d='M7 21l6-6 4 4 8-8' stroke='%23cdf264' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f2f6e9;
+    --card: #ffffff;
+    --ink: #111210;
+    --ink-2: #2a2c27;
+    --muted: #8b9085;
+    --line: #eceee6;
+    --lime: #cdf264;
+    --lime-2: #b9e34a;
+    --lime-soft: #e9f7c4;
+    --red: #ff6b5b;
+    --r-lg: 30px;
+    --r-md: 20px;
+    --shadow: 0 1px 0 rgba(17, 18, 16, .03), 0 12px 32px -18px rgba(17, 18, 16, .18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         font-size: 14px; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  a { color: inherit; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 28px 36px 60px; }
+
+  /* ---------- top bar ---------- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 18px; text-decoration: none; }
+  .brand-mark { width: 40px; height: 40px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; }
+  .nav { display: flex; gap: 4px; background: var(--card); padding: 6px; border-radius: 999px; box-shadow: var(--shadow); }
+  .nav a { text-decoration: none; padding: 9px 18px; border-radius: 999px; font-weight: 500; font-size: 13px; color: var(--ink-2); }
+  .nav a.active { background: var(--ink); color: #fff; }
+  .nav a:not(.active):hover { background: var(--bg); }
+  .top-actions { display: flex; align-items: center; gap: 10px; }
+  .icon-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card); display: grid; place-items: center;
+              box-shadow: var(--shadow); position: relative; text-decoration: none; }
+  .icon-btn .badge { position: absolute; top: 6px; right: 6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+                     background: var(--lime); color: var(--ink); font-size: 10px; font-weight: 700; display: grid; place-items: center;
+                     border: 2px solid var(--card); }
+  .status-chip { display: flex; align-items: center; gap: 8px; background: var(--card); padding: 8px 14px 8px 10px;
+                 border-radius: 999px; box-shadow: var(--shadow); font-weight: 600; font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lime-2); box-shadow: 0 0 0 4px var(--lime-soft); }
+  .dot.off { background: #c9ccc3; box-shadow: 0 0 0 4px #eef0ea; }
+  .dot.warn { background: #ffb547; box-shadow: 0 0 0 4px #fff1d9; }
+
+  /* ---------- heading ---------- */
+  .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin: 34px 0 26px; flex-wrap: wrap; }
+  .eyebrow { color: var(--muted); font-size: 12px; font-weight: 500; }
+  h1 { font-size: 40px; letter-spacing: -1.2px; margin: 6px 0 6px; font-weight: 700; line-height: 1.05; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .hero-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .hours { display: flex; gap: 2px; background: var(--card); padding: 6px; border-radius: 999px; box-shadow: var(--shadow); }
+  .hour { width: 48px; padding: 7px 0; border-radius: 999px; text-align: center; }
+  .hour small { display: block; font-size: 10px; color: var(--muted); }
+  .hour b { font-size: 14px; font-weight: 600; }
+  .hour.now { background: var(--lime); }
+  .hour.now small { color: var(--ink-2); }
+  .btn-primary { display: inline-flex; align-items: center; gap: 12px; background: var(--ink); color: #fff; padding: 9px 22px 9px 9px;
+                 border-radius: 999px; font-weight: 600; height: 54px; box-shadow: var(--shadow); }
+  .btn-primary .plus { width: 36px; height: 36px; border-radius: 50%; background: var(--lime); display: grid; place-items: center; }
+  .btn-primary:disabled { opacity: .7; cursor: progress; }
+  .btn-primary.running .plus svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- cards ---------- */
+  .grid { display: grid; gap: 20px; }
+  .g-3 { grid-template-columns: 1.25fr 1fr .78fr; }
+  .g-2 { grid-template-columns: 1.4fr 1fr; }
+  .g-3e { grid-template-columns: 1fr 1fr 1fr; }
+  .row { margin-bottom: 20px; }
+  .card { background: var(--card); border-radius: var(--r-lg); padding: 26px; box-shadow: var(--shadow); min-width: 0; }
+  .card.dark { background: var(--ink); color: #fff; }
+  .card.lime { background: var(--lime); }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+  .card-title { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+  .card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 600;
+          background: var(--bg); }
+  .card.dark .pill { background: #1f211d; color: #e8eae3; }
+  .pill-btn:hover { filter: brightness(.96); }
+  .round { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #1f211d; }
+  .card:not(.dark) .round { background: var(--bg); }
+
+  /* gauge card */
+  .gauge-wrap { display: grid; place-items: center; position: relative; margin: 2px 0 10px; }
+  .gauge-center { position: absolute; top: 64%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .gauge-center .big { font-size: 58px; font-weight: 700; letter-spacing: -2px; line-height: 1; }
+  .gauge-center .big small { font-size: 26px; letter-spacing: 0; }
+  .gauge-center .lbl { color: #a3a79d; font-size: 12px; margin-top: 6px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #262824; padding-top: 18px; margin-top: 6px; }
+  .stat .k { font-size: 12px; color: #a3a79d; display: flex; align-items: center; gap: 6px; }
+  .stat .v { font-size: 24px; font-weight: 700; margin-top: 6px; letter-spacing: -.5px; }
+  .k-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+  /* pill bars */
+  .bars { display: flex; justify-content: space-around; align-items: flex-end; gap: 14px; height: 230px; padding-top: 6px; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 120px; min-width: 0; cursor: pointer; }
+  .bar-track { width: 70px; height: 170px; border-radius: 999px; background: #f1f3ec; position: relative; display: flex; align-items: flex-end; }
+  .bar-fill { width: 100%; border-radius: 999px; position: relative; transition: height .6s cubic-bezier(.2,.8,.2,1); min-height: 34px; }
+  .bar-fill.ink { background: var(--ink); }
+  .bar-fill.lime { background: var(--lime); }
+  .bar-fill.hatch { background: repeating-linear-gradient(135deg, var(--ink) 0 4px, #fff 4px 9px); border: 2px solid var(--ink); }
+  .bar-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #fff; border-radius: 999px; padding: 4px 8px;
+               font-size: 11px; font-weight: 700; box-shadow: 0 4px 12px -6px rgba(0,0,0,.3); white-space: nowrap; }
+  .bar-name { font-weight: 600; font-size: 13px; text-align: center; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-meta { font-size: 11px; color: var(--muted); margin-top: -6px; white-space: nowrap; }
+
+  /* lime pipeline card */
+  .big-num { font-size: 52px; font-weight: 700; letter-spacing: -2px; line-height: 1; }
+  .big-num small { font-size: 14px; font-weight: 600; letter-spacing: 0; margin-left: 4px; }
+  .blocks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 22px 0; }
+  .block { height: 30px; border-radius: 10px; background: rgba(17, 18, 16, .1); }
+  .block.ok { background: var(--ink); }
+  .block.fail { background: var(--red); }
+  .block.run { background: repeating-linear-gradient(135deg, var(--ink) 0 4px, transparent 4px 8px); }
+  .btn-white { width: 100%; background: #fff; border-radius: 999px; padding: 15px; font-weight: 600; font-size: 13px;
+               display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-white:hover { background: #fbfdf5; }
+
+  /* trend list */
+  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink-2); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+  .sw.reddit { background: var(--ink); }
+  .sw.twitter { background: var(--lime-2); }
+  .sw.youtube { background: repeating-linear-gradient(135deg, var(--ink) 0 2px, #fff 2px 4px); border: 1px solid var(--ink); }
+  .sw.google_trends { background: #c9ccc3; }
+  .t-row { display: grid; grid-template-columns: 52px 1fr auto; gap: 16px; align-items: center; padding: 16px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .t-row:first-of-type { border-top: 0; }
+  .t-row:hover .t-name { text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--lime-2); }
+  .t-ico { width: 52px; height: 52px; border-radius: 16px; background: #f4f6ef; display: grid; place-items: center; }
+  .t-ico.hot { background: var(--lime); }
+  .t-name { font-weight: 700; font-size: 15px; }
+  .t-time { font-weight: 500; color: var(--muted); font-size: 12px; margin-left: 8px; }
+  .t-desc { color: var(--muted); font-size: 12px; margin: 4px 0 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .split { display: flex; align-items: center; gap: 4px; }
+  .seg { height: 6px; border-radius: 999px; }
+  .seg.reddit { background: var(--ink); }
+  .seg.twitter { background: var(--lime-2); }
+  .seg.youtube { background: repeating-linear-gradient(135deg, var(--ink) 0 2px, #fff 2px 4px); border: 1px solid var(--ink); height: 6px; }
+  .seg.google_trends { background: #c9ccc3; }
+  .split-meta { font-size: 11px; color: var(--muted); margin-left: 10px; white-space: nowrap; }
+  .t-score { text-align: right; }
+  .t-score b { font-size: 26px; font-weight: 700; letter-spacing: -.8px; }
+  .t-score small { display: block; font-size: 11px; color: var(--muted); }
+  .tag { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; background: var(--lime); margin-left: 6px; vertical-align: 2px; }
+  .tag.grey { background: #eef0ea; color: var(--ink-2); }
+  .tag.red { background: #ffe3df; color: #b3261e; }
+
+  /* dot matrix */
+  .matrix-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .matrix-top .big { font-size: 28px; font-weight: 700; letter-spacing: -.8px; text-align: right; }
+  .matrix-top .big small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+
+  /* lists */
+  .list-item { display: flex; gap: 12px; align-items: flex-start; padding: 13px 0; border-top: 1px solid var(--line); }
+  .list-item:first-child { border-top: 0; padding-top: 0; }
+  .li-ico { width: 36px; height: 36px; border-radius: 12px; background: var(--bg); display: grid; place-items: center; flex: none; }
+  .li-ico.lime { background: var(--lime); }
+  .li-ico.dark { background: var(--ink); }
+  .li-main { flex: 1; min-width: 0; }
+  .li-title { font-weight: 600; font-size: 13px; }
+  .li-sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .li-right { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .chip { padding: 4px 9px; border-radius: 999px; background: var(--bg); font-size: 11px; font-weight: 600; }
+  .chip.dark { background: var(--ink); color: #fff; }
+  .kw-bar { height: 6px; border-radius: 999px; background: #f1f3ec; overflow: hidden; margin-top: 7px; }
+  .kw-bar i { display: block; height: 100%; background: var(--ink); border-radius: 999px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 26px 0; text-align: center; }
+
+  /* tables */
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .seg-ctl { display: flex; background: var(--bg); padding: 4px; border-radius: 999px; gap: 2px; }
+  .seg-ctl button { padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .seg-ctl button.on { background: var(--ink); color: #fff; }
+  .search { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 999px; padding: 0 14px; height: 38px; flex: 1; min-width: 200px; }
+  .search input { border: 0; background: none; outline: none; font: inherit; flex: 1; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 12px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 520px; }
+  .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; color: var(--muted); font-size: 12px; }
+  .pager button { padding: 8px 14px; border-radius: 999px; background: var(--bg); font-weight: 600; font-size: 12px; }
+  .pager button:disabled { opacity: .4; cursor: default; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; }
+
+  /* pipeline steps */
+  .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .step { background: var(--bg); border-radius: var(--r-md); padding: 18px; position: relative; }
+  .step.on { background: var(--lime); }
+  .step .n { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  .step .name { font-weight: 700; margin-top: 14px; }
+  .step .desc { font-size: 11px; color: var(--muted); margin-top: 4px; min-height: 30px; }
+  .step.on .desc { color: var(--ink-2); }
+  .step .val { font-size: 26px; font-weight: 700; margin-top: 10px; letter-spacing: -.6px; }
+  .step .val small { font-size: 11px; font-weight: 500; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+  .step.on .val small { color: var(--ink-2); }
+  .kv { display: flex; justify-content: space-between; padding: 11px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .kv:first-child { border-top: 0; }
+  .kv span:first-child { color: var(--muted); }
+
+  /* drawer */
+  .scrim { position: fixed; inset: 0; background: rgba(17, 18, 16, .28); opacity: 0; pointer-events: none; transition: .2s; z-index: 20; }
+  .drawer { position: fixed; top: 12px; right: 12px; bottom: 12px; width: min(620px, calc(100vw - 24px)); background: var(--bg);
+            border-radius: 32px; transform: translateX(110%); transition: .3s cubic-bezier(.2,.8,.2,1); z-index: 21; overflow-y: auto; padding: 22px; }
+  .drawer.open { transform: none; }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+  .drawer h2 { font-size: 28px; letter-spacing: -.8px; margin: 8px 0 4px; }
+  .drawer .card { margin-top: 14px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 120px); background: var(--ink); color: #fff; padding: 12px 18px;
+           border-radius: 999px; font-weight: 600; font-size: 13px; transition: .3s; z-index: 30; display: flex; align-items: center; gap: 10px;
+           opacity: 0; visibility: hidden; }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+  .banner { background: #fff1d9; border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 20px; font-weight: 500; display: none; }
+  .banner.show { display: block; }
+  .hide { display: none !important; }
+  .skeleton { color: transparent !important; background: #eceee6; border-radius: 8px; }
+
+  @media (max-width: 1150px) {
+    .g-3, .g-2, .g-3e { grid-template-columns: 1fr 1fr; }
+    .g-3 > :first-child { grid-column: 1 / -1; }
+    .steps { grid-template-columns: repeat(3, 1fr); }
+    .nav a { padding: 9px 12px; }
+  }
+  @media (max-width: 760px) {
+    .wrap { padding: 18px 16px 40px; }
+    .g-3, .g-2, .g-3e { grid-template-columns: 1fr; }
+    .topbar { flex-wrap: wrap; }
+    .nav { order: 3; width: 100%; overflow-x: auto; }
+    h1 { font-size: 30px; }
+    .hours .hour:nth-child(-n+3) { display: none; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .status-chip span.txt { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="#overview">
+      <span class="brand-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cdf264" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+      </span>
+      Trend Intel
+    </a>
+    <nav class="nav" id="nav">
+      <a href="#overview" data-page="overview">Overview</a>
+      <a href="#trends" data-page="trends">Trends</a>
+      <a href="#datasets" data-page="datasets">Datasets</a>
+      <a href="#pipeline" data-page="pipeline">Pipeline</a>
+      <a href="#alerts" data-page="alerts">Alerts</a>
+    </nav>
+    <div class="top-actions">
+      <a class="icon-btn" href="#datasets" title="Search posts" onclick="setTimeout(()=>document.getElementById('q')?.focus(),50)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      </a>
+      <a class="icon-btn" href="#alerts" title="Alerts">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+        <span class="badge hide" id="alertBadge">0</span>
+      </a>
+      <div class="status-chip" id="modeChip"><span class="dot off"></span><span class="txt">Connecting…</span></div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="eyebrow" id="dateLine">&nbsp;</div>
+      <h1 id="greeting">Trend Intelligence</h1>
+      <div class="sub" id="heroSub">Loading the latest signals…</div>
+    </div>
+    <div class="hero-right">
+      <div class="hours" id="hours" title="Posts collected per hour"></div>
+      <button class="btn-primary" id="runBtn" onclick="runPipeline()">
+        <span class="plus"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111210" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span id="runLabel">Run pipeline</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <!-- ================= OVERVIEW ================= -->
+  <section data-view="overview">
+    <div class="grid g-3 row">
+      <div class="card dark">
+        <div class="card-head">
+          <span class="pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cdf264" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 4 5 6 5 11a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z"/></svg>
+            Top trend · virality
+          </span>
+          <button class="round" id="topOpen" title="Open trend">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
+          </button>
+        </div>
+        <div class="gauge-wrap">
+          <svg id="gauge" viewBox="0 0 340 200" style="width:100%;max-width:340px;height:auto"></svg>
+          <div class="gauge-center">
+            <div class="big" id="gaugeNum">–</div>
+            <div class="lbl" id="gaugeLbl">waiting for data</div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="k"><i class="k-dot" style="background:var(--lime)"></i>Posts · 24h</div><div class="v" id="sPosts">–</div></div>
+          <div class="stat"><div class="k"><i class="k-dot" style="border:1.5px solid #fff"></i>Active trends</div><div class="v" id="sTrends">–</div></div>
+          <div class="stat"><div class="k"><i class="k-dot" style="background:#555"></i>Alerts · 24h</div><div class="v" id="sAlerts">–</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div><div class="card-title">Trend strength</div><div class="card-sub">Trend score of the top 3 trends</div></div>
+          <a class="pill pill-btn" href="#trends" style="text-decoration:none">View all</a>
+        </div>
+        <div class="bars" id="strengthBars"></div>
+      </div>
+
+      <div class="card lime">
+        <div class="card-head" style="align-items:center">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="round" style="background:#fff">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111210" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5"/><path d="M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/></svg>
+            </span>
+            <span class="card-title">Pipeline</span>
+          </div>
+          <b style="font-size:13px" id="runsOk">–/10</b>
+        </div>
+        <div class="big-num" id="lastRunAgo">–</div>
+        <div style="font-size:12px;margin-top:6px;font-weight:500" id="lastRunMeta">since the last run</div>
+        <div class="blocks" id="runBlocks"></div>
+        <button class="btn-white" onclick="runPipeline()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Run now
+        </button>
+      </div>
+    </div>
+
+    <div class="grid g-2 row">
+      <div class="card">
+        <div class="card-head">
+          <div><div class="card-title">Trending now</div><div class="card-sub" id="trendCount">&nbsp;</div></div>
+          <div class="legend"><span><i class="sw reddit"></i>Reddit</span><span><i class="sw twitter"></i>X</span><span><i class="sw youtube"></i>YouTube</span><span><i class="sw google_trends"></i>Google</span></div>
+        </div>
+        <div id="trendList"></div>
+      </div>
+
+      <div class="card">
+        <div class="matrix-top">
+          <div><div class="card-title">Momentum</div><div class="card-sub" id="matrixSub">&nbsp;</div></div>
+          <div class="big" id="matrixBig">–<small>&nbsp;</small></div>
+        </div>
+        <svg id="matrix" width="100%" height="300" viewBox="0 0 420 300" preserveAspectRatio="xMidYMax meet" style="margin-top:10px"></svg>
+      </div>
+    </div>
+
+    <div class="grid g-3e row">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Latest alerts</div><div class="card-sub">Trends that crossed both thresholds</div></div>
+          <a class="pill pill-btn" href="#alerts" style="text-decoration:none">All</a></div>
+        <div id="alertsMini"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Content ideas</div><div class="card-sub" id="ideasSub">Ready-to-post angles</div></div>
+          <a class="pill pill-btn" href="#alerts" style="text-decoration:none">All</a></div>
+        <div id="ideasMini"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Rising keywords</div><div class="card-sub">Growth vs. baseline, beyond current trends</div></div></div>
+        <div id="kwMini"></div>
+      </div>
+    </div>
+
+    <div class="card row">
+      <div class="card-head">
+        <div><div class="card-title">Data intake</div><div class="card-sub">Posts collected per hour, last 24 hours</div></div>
+        <div class="legend"><span><i class="sw reddit"></i>Reddit</span><span><i class="sw twitter"></i>X</span><span><i class="sw youtube"></i>YouTube</span><span><i class="sw google_trends"></i>Google</span></div>
+      </div>
+      <svg id="intake" width="100%" height="200" viewBox="0 0 1200 200" preserveAspectRatio="none"></svg>
+      <div style="display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:6px" id="intakeAxis"></div>
+    </div>
+  </section>
+
+  <!-- ================= TRENDS ================= -->
+  <section data-view="trends" class="hide">
+    <div class="card">
+      <div class="toolbar">
+        <div class="seg-ctl" id="trendFilter">
+          <button class="on" data-v="active">Active</button><button data-v="all">All time</button>
+        </div>
+        <div style="flex:1"></div>
+        <div class="legend"><span><i class="sw reddit"></i>Reddit</span><span><i class="sw twitter"></i>X</span><span><i class="sw youtube"></i>YouTube</span></div>
+      </div>
+      <table>
+        <thead><tr><th>Trend</th><th>Last 27h</th><th>Platforms</th><th class="num">Score</th><th class="num">Virality</th><th class="num">Momentum</th><th class="num">Lifespan</th><th>Status</th></tr></thead>
+        <tbody id="trendTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= DATASETS ================= -->
+  <section data-view="datasets" class="hide">
+    <div class="grid g-3 row" style="grid-template-columns:repeat(4,1fr)" id="dsStats"></div>
+    <div class="grid row" style="grid-template-columns:2.2fr 1fr">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Posts</div><div class="card-sub" id="postsSub">&nbsp;</div></div></div>
+        <div class="toolbar">
+          <div class="seg-ctl" id="platformFilter">
+            <button class="on" data-v="">All</button><button data-v="reddit">Reddit</button><button data-v="twitter">X</button>
+            <button data-v="youtube">YouTube</button><button data-v="google_trends">Google</button>
+          </div>
+          <label class="search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b9085" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input id="q" placeholder="Search text or keyword…" autocomplete="off">
+          </label>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Platform</th><th>Post</th><th>Keywords</th><th class="num">Likes</th><th class="num">Comments</th><th class="num">Engagement</th><th>Posted</th></tr></thead>
+            <tbody id="postsTable"></tbody>
+          </table>
+        </div>
+        <div class="pager"><span id="pageInfo"></span><div style="display:flex;gap:6px"><button id="prevPage">Previous</button><button id="nextPage">Next</button></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Keywords</div><div class="card-sub">Busiest terms right now</div></div></div>
+        <div class="seg-ctl" id="kwMode" style="margin-bottom:14px;display:inline-flex">
+          <button class="on" data-v="1">New signals</button><button data-v="0">Everything</button>
+        </div>
+        <div id="kwFull"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PIPELINE ================= -->
+  <section data-view="pipeline" class="hide">
+    <div class="card row">
+      <div class="card-head"><div><div class="card-title">Pipeline stages</div><div class="card-sub" id="stepsSub">Results of the latest pipeline run</div></div></div>
+      <div class="steps" id="steps"></div>
+    </div>
+    <div class="grid row" style="grid-template-columns:2fr 1fr">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Run history</div><div class="card-sub">Collections and pipeline runs</div></div></div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>Task</th><th>Trigger</th><th>Started</th><th class="num">Duration</th><th>Result</th><th>Status</th></tr></thead>
+          <tbody id="runsTable"></tbody>
+        </table></div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-head"><div class="card-title">Data sources</div></div>
+          <div id="sources"></div>
+        </div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-head"><div class="card-title">Alert channels</div></div>
+          <div id="channels"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Schedule & thresholds</div></div>
+          <div id="schedule"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ALERTS ================= -->
+  <section data-view="alerts" class="hide">
+    <div class="grid row" style="grid-template-columns:1fr 1.3fr">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Alert log</div><div class="card-sub" id="alertsSub">&nbsp;</div></div></div>
+        <div id="alertsFull"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Content ideas</div><div class="card-sub">Generated for high-potential trends</div></div></div>
+        <div id="ideasFull"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const PLATFORM = { reddit: "Reddit", twitter: "X", youtube: "YouTube", google_trends: "Google", demo: "Demo" };
+const ORDER = ["reddit", "twitter", "youtube", "google_trends"];
+const state = { page: "overview", overview: null, trends: [], postsPage: 0, platform: "", q: "", kwExclude: true, trendScope: "active" };
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (n) => n == null ? "–" : Number(n).toLocaleString();
+const pct = (n) => n == null ? "–" : Math.round(n);
+const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+
+function ago(ts) {
+  if (!ts) return "never";
+  const s = (Date.now() - new Date(ts)) / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  return `${Math.round(s / 86400)} d ago`;
+}
+const clock = (ts) => ts ? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–";
+const dayClock = (ts) => ts ? new Date(ts).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "–";
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    let detail = r.statusText;
+    try { detail = (await r.json()).detail || detail; } catch (e) {}
+    const err = new Error(detail); err.status = r.status; throw err;
+  }
+  return r.json();
+}
+
+function toast(msg) {
+  const t = $("toast"); t.innerHTML = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 3200);
+}
+
+function banner(msg) {
+  const b = $("banner");
+  if (msg) { b.textContent = msg; b.classList.add("show"); } else b.classList.remove("show");
+}
+
+/* ---------------- icons ---------------- */
+const ICON = {
+  flame: (c = "#111210") => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 4 5 6 5 11a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z"/></svg>`,
+  trend: (c = "#111210") => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>`,
+  search: (c = "#111210") => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
+  fade: (c = "#111210") => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></svg>`,
+  bell: (c = "#111210") => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>`,
+  bulb: (c = "#111210") => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>`,
+  check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>`,
+};
+function trendIcon(t) {
+  if (t.source === "google_trends") return ICON.search();
+  if ((t.trend_momentum ?? 0) < 0) return ICON.fade();
+  return (t.virality_probability ?? 0) >= 70 ? ICON.flame() : ICON.trend();
+}
+
+/* ---------------- charts ---------------- */
+function drawGauge(value) {
+  const svg = $("gauge"), N = 28, cx = 170, cy = 182, r1 = 122, r2 = 162;
+  const lit = Math.round((Math.max(0, Math.min(100, value || 0)) / 100) * N);
+  let s = "";
+  for (let i = 0; i < N; i++) {
+    const a = (-100 + (200 * i) / (N - 1)) * Math.PI / 180;
+    const x1 = cx + r1 * Math.sin(a), y1 = cy - r1 * Math.cos(a);
+    const x2 = cx + (r2 - 12) * Math.sin(a), y2 = cy - (r2 - 12) * Math.cos(a);
+    s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+            stroke="${i < lit ? "#cdf264" : "#2e302b"}" stroke-width="11" stroke-linecap="round">
+            <animate attributeName="stroke-opacity" from="0" to="1" dur=".4s" begin="${(i * 0.02).toFixed(2)}s" fill="freeze"/></line>`;
+  }
+  svg.innerHTML = s;
+}
+
+function sparkline(series, w = 120, h = 34, color = "#111210") {
+  const v = (series || []).map(Number);
+  if (!v.length) return `<span style="color:var(--muted);font-size:12px">no data</span>`;
+  const max = Math.max(...v, 1), step = w / Math.max(v.length - 1, 1);
+  const pts = v.map((y, i) => `${(i * step).toFixed(1)},${(h - 3 - (y / max) * (h - 6)).toFixed(1)}`).join(" ");
+  const last = v.length - 1;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${(last * step).toFixed(1)}" cy="${(h - 3 - (v[last] / max) * (h - 6)).toFixed(1)}" r="3.5" fill="#cdf264" stroke="#111210" stroke-width="1.5"/></svg>`;
+}
+
+function drawMatrix(trend) {
+  const svg = $("matrix");
+  if (!trend || !trend.series || !trend.series.length) {
+    svg.innerHTML = `<text x="210" y="150" text-anchor="middle" fill="#8b9085" font-size="13">No trend data yet</text>`;
+    $("matrixSub").textContent = "Run the pipeline to see momentum"; $("matrixBig").innerHTML = "–<small>&nbsp;</small>";
+    return;
+  }
+  // 3-hour windows (oldest -> newest), last window = "now"
+  const s = trend.series.map(Number), win = [];
+  for (let i = s.length; i > 0; i -= 3) win.unshift(s.slice(Math.max(0, i - 3), i).reduce((a, b) => a + b, 0));
+  const cols = win.slice(-9), maxDots = 13;
+  const peak = Math.max(...cols, 1);
+  const per = Math.max(1, Math.ceil(peak / maxDots));
+  const base = cols.slice(0, -1).reduce((a, b) => a + b, 0) / Math.max(cols.length - 1, 1);
+  const W = 420, H = 300, top = 18, bottom = 30, gap = (W - 30) / cols.length, dy = (H - top - bottom) / maxDots;
+  let out = "";
+  const baseY = H - bottom - (base / per) * dy;
+  cols.forEach((v, c) => {
+    const x = 26 + c * gap + gap / 2, n = Math.round(v / per), isNow = c === cols.length - 1;
+    for (let d = 0; d < maxDots; d++) {
+      const y = H - bottom - d * dy - dy / 2;
+      if (d < n) out += `<circle cx="${x}" cy="${y}" r="6.2" fill="${isNow ? "#cdf264" : "#111210"}"/>`;
+      else out += `<circle cx="${x}" cy="${y}" r="5" fill="#eceee6"/>`;
+    }
+    const hoursBack = (cols.length - 1 - c) * 3;
+    out += `<text x="${x}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#8b9085">${isNow ? "now" : "-" + hoursBack + "h"}</text>`;
+  });
+  out += `<line x1="16" x2="${W - 4}" y1="${baseY}" y2="${baseY}" stroke="#111210" stroke-dasharray="3 4" stroke-width="1"/>
+          <rect x="6" y="${baseY - 21}" width="76" height="17" rx="8.5" fill="#fff"/>
+          <text x="12" y="${baseY - 9}" font-size="11" fill="#2a2c27">baseline ${Math.round(base)}</text>`;
+  svg.innerHTML = out;
+  $("matrixSub").textContent = `${trend.trend_name} · each dot ≈ ${per} mention${per > 1 ? "s" : ""} · 3h windows`;
+  $("matrixBig").innerHTML = `${fmt(cols[cols.length - 1])}<small>mentions · last 3h</small>`;
+}
+
+function drawIntake(rows) {
+  const svg = $("intake"), W = 1200, H = 200, n = rows.length || 1, bw = W / n;
+  const max = Math.max(...rows.map((r) => r.total), 1);
+  let out = "";
+  out += `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="6" height="6" fill="#fff"/><rect width="3" height="6" fill="#111210"/></pattern></defs>`;
+  const fill = { reddit: "#111210", twitter: "#b9e34a", youtube: "url(#hatch)", google_trends: "#c9ccc3" };
+  rows.forEach((r, i) => {
+    let y = H;
+    const x = i * bw + bw * 0.18, w = bw * 0.64;
+    ORDER.forEach((p) => {
+      const v = r[p] || 0; if (!v) return;
+      const h = (v / max) * (H - 10); y -= h;
+      out += `<rect x="${x}" y="${y}" width="${w}" height="${Math.max(h - 2, 0.5)}" rx="${Math.min(w / 2, 6)}" fill="${fill[p]}" ${p === "youtube" ? 'stroke="#111210" stroke-width="1.5"' : ""}><title>${PLATFORM[p]}: ${v}</title></rect>`;
+    });
+    if (!r.total) out += `<rect x="${x}" y="${H - 4}" width="${w}" height="4" rx="2" fill="#eceee6"/>`;
+  });
+  svg.innerHTML = out;
+  const labels = rows.filter((_, i) => i % 4 === 0 || i === rows.length - 1).map((r) => clock(r.bucket));
+  $("intakeAxis").innerHTML = labels.map((l) => `<span>${l}</span>`).join("");
+}
+
+function splitBar(split, width = 240) {
+  const entries = ORDER.filter((p) => split && split[p]).map((p) => [p, split[p]]);
+  const total = entries.reduce((a, [, v]) => a + v, 0);
+  if (!total) return `<div class="split"><span class="split-meta" style="margin-left:0">no mentions in the last 3h</span></div>`;
+  const segs = entries.map(([p, v]) => `<i class="seg ${p}" title="${PLATFORM[p]}: ${v}" style="width:${Math.max(8, (v / total) * width)}px"></i>`).join("");
+  const meta = entries.map(([p, v]) => `${PLATFORM[p][0]}${v}`).join(" · ");
+  return `<div class="split">${segs}<span class="split-meta">${meta}</span></div>`;
+}
+
+/* ---------------- overview ---------------- */
+async function loadOverview() {
+  const [ov, trends, alerts, ideas, kws, act, runs] = await Promise.all([
+    api("/api/overview"), api("/api/trends?limit=20"), api("/api/alerts?limit=6"), api("/api/ideas?limit=4"),
+    api("/api/keywords?limit=6"), api("/api/activity?hours=24"), api("/api/runs?limit=40"),
+  ]);
+  state.overview = ov; state.trends = trends;
+  banner(null);
+  renderChrome(ov, trends, act);
+
+  // black card
+  const top = trends[0];
+  drawGauge(top?.virality_probability ?? 0);
+  $("gaugeNum").innerHTML = top ? `${pct(top.virality_probability)}<small>%</small>` : "–";
+  $("gaugeLbl").textContent = top ? top.trend_name : "no active trends yet";
+  $("topOpen").onclick = () => top && openTrend(top.id);
+  $("sPosts").textContent = fmt(ov.counts.posts_24h);
+  $("sTrends").textContent = fmt(ov.counts.trends_active);
+  $("sAlerts").textContent = fmt(ov.counts.alerts_24h);
+
+  // pill bars
+  const styles = ["ink", "lime", "hatch"];
+  $("strengthBars").innerHTML = trends.slice(0, 3).map((t, i) => `
+    <div class="bar-col" onclick="openTrend(${t.id})" title="${esc(t.trend_name)}">
+      <div class="bar-track"><div class="bar-fill ${styles[i]}" style="height:${Math.max(20, t.trend_score || 0)}%">
+        <span class="bar-badge">${pct(t.trend_score)}</span></div></div>
+      <div class="bar-name">${esc(cap(t.trend_name))}</div>
+      <div class="bar-meta">z ${(t.z_score ?? 0).toFixed(1)} · ${(t.platforms || []).map((p) => PLATFORM[p] || p).join(", ")}</div>
+    </div>`).join("") || `<div class="empty" style="width:100%">No trends yet — run the pipeline.</div>`;
+
+  // pipeline card
+  const pipe = runs.filter((r) => r.task === "pipeline").slice(0, 10);
+  const ok = pipe.filter((r) => r.status === "success").length;
+  $("runsOk").textContent = `${ok}/${pipe.length || 0}`;
+  const last = pipe[0];
+  if (last) {
+    const mins = Math.round((Date.now() - new Date(last.started_at)) / 60000);
+    $("lastRunAgo").innerHTML = mins < 1 ? `Now<small>just ran</small>` : mins < 60 ? `${mins}<small>min ago</small>`
+      : `${Math.round(mins / 60)}<small>h ago</small>`;
+    const s = last.summary || {};
+    $("lastRunMeta").textContent = `${fmt(s.posts_processed)} posts · ${fmt(s.trends_detected)} trends · ${fmt(s.alerts_sent)} alerts`;
+  } else {
+    $("lastRunAgo").innerHTML = `–`; $("lastRunMeta").textContent = "No runs recorded yet";
+  }
+  const blocks = [...pipe].reverse();
+  $("runBlocks").innerHTML = Array.from({ length: 10 }, (_, i) => {
+    const r = blocks[i - (10 - blocks.length)];
+    const cls = !r ? "" : r.status === "success" ? "ok" : r.status === "running" ? "run" : "fail";
+    return `<div class="block ${cls}" title="${r ? esc(r.status + " · " + dayClock(r.started_at)) : "no run"}"></div>`;
+  }).join("");
+
+  // trend list
+  $("trendCount").textContent = `${trends.length} active · sorted by virality`;
+  $("trendList").innerHTML = trends.slice(0, 5).map((t) => `
+    <div class="t-row" onclick="openTrend(${t.id})">
+      <div class="t-ico ${(t.virality_probability ?? 0) >= ov.thresholds.virality ? "hot" : ""}">${trendIcon(t)}</div>
+      <div style="min-width:0">
+        <div><span class="t-name">${esc(cap(t.trend_name))}</span><span class="t-time">${clock(t.detected_at)}</span>
+          ${t.alert_count ? `<span class="tag">alerted</span>` : ""}${(t.trend_momentum ?? 0) < 0 ? `<span class="tag grey">cooling</span>` : ""}</div>
+        <div class="t-desc">${esc(t.description || "")}</div>
+        ${splitBar(t.platform_split)}
+      </div>
+      <div class="t-score"><b>${pct(t.virality_probability)}%</b><small>virality</small></div>
+    </div>`).join("") || `<div class="empty">No active trends. Collect some data and run the pipeline.</div>`;
+
+  drawMatrix(top);
+  drawIntake(act);
+
+  // alerts mini
+  $("alertsMini").innerHTML = alerts.slice(0, 4).map((a) => `
+    <div class="list-item">
+      <div class="li-ico dark">${ICON.bell("#cdf264")}</div>
+      <div class="li-main"><div class="li-title">${esc(cap(a.trend_name))}</div>
+        <div class="li-sub">${pct(a.virality_at_alert)}% virality · via ${(a.channels_sent || []).join(", ")}</div></div>
+      <div class="li-right">${ago(a.alerted_at)}</div>
+    </div>`).join("") || `<div class="empty">No alerts yet</div>`;
+
+  // ideas mini
+  $("ideasMini").innerHTML = ideas.slice(0, 3).map((c) => `
+    <div class="list-item">
+      <div class="li-ico lime">${ICON.bulb()}</div>
+      <div class="li-main"><div class="li-title">${esc(c.suggested_format)} · ${esc(cap(c.trend_name))}</div>
+        <div class="li-sub">“${esc(c.hook)}”</div></div>
+    </div>`).join("") || `<div class="empty">Ideas appear for trends above ${pct(ov.thresholds.insight)}% virality</div>`;
+
+  // keywords mini
+  const kmax = Math.max(...kws.map((k) => k.growth), 1);
+  $("kwMini").innerHTML = kws.slice(0, 5).map((k) => `
+    <div class="list-item" style="display:block">
+      <div style="display:flex;justify-content:space-between"><span class="li-title">${esc(k.word)}</span>
+        <span class="li-right"><b style="color:var(--ink)">×${k.growth.toFixed(1)}</b> · ${k.current} now</span></div>
+      <div class="kw-bar"><i style="width:${(k.growth / kmax) * 100}%"></i></div>
+    </div>`).join("") || `<div class="empty">Nothing else is moving right now</div>`;
+}
+
+function renderChrome(ov, trends, act) {
+  const now = new Date(), h = now.getHours();
+  $("dateLine").textContent = now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" }) +
+    ` · updated ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  const titles = { overview: h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening",
+                   trends: "Trends", datasets: "Datasets", pipeline: "Pipeline", alerts: "Alerts & ideas" };
+  $("greeting").textContent = titles[state.page];
+  const hot = trends.filter((t) => (t.virality_probability ?? 0) >= ov.thresholds.virality);
+  const subs = {
+    overview: trends.length
+      ? `${trends.length} trend${trends.length > 1 ? "s" : ""} active — ${hot.length ? `“${trends[0].trend_name}” is ready to post` : "nothing above the alert threshold yet"}`
+      : "No active trends yet — run the pipeline to get started",
+    trends: `Every detected trend with its latest prediction`,
+    datasets: `${fmt(ov.counts.posts_total)} posts · ${fmt(ov.counts.keywords_tracked)} keywords tracked`,
+    pipeline: `Collection → processing → detection → prediction → insight → alerts`,
+    alerts: `${fmt(ov.counts.alerts_total)} alert${ov.counts.alerts_total === 1 ? "" : "s"} sent · ${fmt(ov.counts.ideas_total)} content idea${ov.counts.ideas_total === 1 ? "" : "s"}`,
+  };
+  $("heroSub").textContent = subs[state.page];
+
+  const chip = $("modeChip");
+  chip.innerHTML = ov.demo_mode ? `<span class="dot warn"></span><span class="txt">Demo data</span>`
+                                : `<span class="dot"></span><span class="txt">Live sources</span>`;
+  const badge = $("alertBadge");
+  badge.textContent = ov.counts.alerts_24h; badge.classList.toggle("hide", !ov.counts.alerts_24h);
+
+  if (act) {
+    const last7 = act.slice(-7);
+    $("hours").innerHTML = last7.map((r, i) => `
+      <div class="hour ${i === last7.length - 1 ? "now" : ""}" title="${fmt(r.total)} posts">
+        <small>${new Date(r.bucket).toLocaleTimeString([], { hour: "2-digit" })}</small><b>${r.total >= 1000 ? (r.total / 1000).toFixed(1) + "k" : r.total}</b></div>`).join("");
+  }
+  setRunning(ov.run_in_progress);
+}
+
+/* ---------------- trends page ---------------- */
+async function loadTrends() {
+  const [ov, trends] = await Promise.all([api("/api/overview"), api(`/api/trends?limit=200&include_inactive=${state.trendScope === "all"}`)]);
+  state.overview = ov;
+  renderChrome(ov, trends.filter((t) => t.is_active));
+  $("trendTable").innerHTML = trends.map((t) => {
+    const status = !t.is_active ? `<span class="tag grey">inactive</span>`
+      : t.alert_count ? `<span class="tag">alerted</span>`
+      : (t.trend_momentum ?? 0) < 0 ? `<span class="tag grey">cooling</span>` : `<span class="tag grey">watching</span>`;
+    return `<tr style="cursor:pointer" onclick="openTrend(${t.id})">
+      <td><b>${esc(cap(t.trend_name))}</b><div class="li-sub">${esc(t.source.replace("_", " "))} · seen ${ago(t.last_seen_at)}</div></td>
+      <td>${sparkline(t.series)}</td>
+      <td>${splitBar(t.platform_split, 90)}</td>
+      <td class="num"><b>${pct(t.trend_score)}</b></td>
+      <td class="num"><b>${pct(t.virality_probability)}%</b></td>
+      <td class="num">${t.trend_momentum == null ? "–" : (t.trend_momentum >= 0 ? "+" : "") + t.trend_momentum.toFixed(2)}</td>
+      <td class="num">${t.estimated_lifespan_days ? "~" + t.estimated_lifespan_days + "d" : "–"}</td>
+      <td>${status}</td></tr>`;
+  }).join("") || `<tr><td colspan="8"><div class="empty">No trends yet</div></td></tr>`;
+}
+
+/* ---------------- datasets page ---------------- */
+async function loadDatasets() {
+  const limit = 15;
+  const params = new URLSearchParams({ limit, offset: state.postsPage * limit });
+  if (state.platform) params.set("platform", state.platform);
+  if (state.q) params.set("q", state.q);
+  const [ov, posts, kws, act] = await Promise.all([
+    api("/api/overview"), api("/api/posts?" + params), api(`/api/keywords?limit=14&exclude_trends=${state.kwExclude}`), api("/api/activity?hours=24"),
+  ]);
+  state.overview = ov;
+  renderChrome(ov, state.trends.length ? state.trends : await api("/api/trends?limit=20"), act);
+
+  const mix = Object.fromEntries(ov.platform_mix.map((m) => [m.platform, m]));
+  $("dsStats").innerHTML = [
+    ["Posts stored", fmt(ov.counts.posts_total), `${fmt(ov.counts.posts_24h)} in the last 24h`, "dark"],
+    ...ORDER.slice(0, 3).map((p) => [PLATFORM[p], fmt(mix[p]?.posts || 0), `posts · 24h · ${fmt(mix[p]?.engagement || 0)} engagement`, ""]),
+  ].map(([k, v, s, cls]) => `<div class="card ${cls}" style="padding:22px"><div class="card-sub" style="margin:0${cls ? ";color:#a3a79d" : ""}">${k}</div>
+      <div style="font-size:32px;font-weight:700;letter-spacing:-1px;margin-top:8px">${v}</div><div class="card-sub">${s}</div></div>`).join("");
+
+  $("postsSub").textContent = `${fmt(posts.total)} matching posts`;
+  $("postsTable").innerHTML = posts.items.map((p) => `
+    <tr><td><span class="chip ${p.platform === "reddit" ? "dark" : ""}">${PLATFORM[p.platform] || esc(p.platform)}</span></td>
+      <td><div class="clamp">${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(p.text)}</a>` : esc(p.text)}</div>
+        <div class="li-sub">${esc(p.author)}</div></td>
+      <td><div class="chips" style="margin:0">${(p.keywords || []).slice(0, 3).map((k) => `<span class="chip">${esc(k)}</span>`).join("")}</div></td>
+      <td class="num">${fmt(p.likes)}</td><td class="num">${fmt(p.comments)}</td>
+      <td class="num"><b>${p.engagement_score == null ? "–" : p.engagement_score.toFixed(0)}</b></td>
+      <td style="white-space:nowrap">${ago(p.posted_at || p.collected_at)}</td></tr>`).join("")
+    || `<tr><td colspan="7"><div class="empty">No posts match</div></td></tr>`;
+  const from = posts.total ? state.postsPage * limit + 1 : 0, to = Math.min(posts.total, (state.postsPage + 1) * limit);
+  $("pageInfo").textContent = `${from}–${to} of ${fmt(posts.total)}`;
+  $("prevPage").disabled = state.postsPage === 0;
+  $("nextPage").disabled = to >= posts.total;
+
+  const kmax = Math.max(...kws.map((k) => k.current), 1);
+  $("kwFull").innerHTML = kws.map((k) => `
+    <div class="list-item" style="display:block;cursor:pointer" onclick="searchFor('${esc(k.word).replace(/'/g, "\\'")}')">
+      <div style="display:flex;justify-content:space-between;gap:8px"><span class="li-title">${esc(k.word)}</span>
+        <span class="li-right"><b style="color:var(--ink)">${k.current}</b> now · ×${k.growth.toFixed(1)}</span></div>
+      <div class="kw-bar"><i style="width:${(k.current / kmax) * 100}%"></i></div>
+    </div>`).join("") || `<div class="empty">No keywords in the current window</div>`;
+}
+
+function searchFor(word) { $("q").value = word; state.q = word; state.postsPage = 0; loadDatasets(); }
+
+/* ---------------- pipeline page ---------------- */
+async function loadPipeline() {
+  const [ov, runs, cfg] = await Promise.all([api("/api/overview"), api("/api/runs?limit=200"), api("/api/config")]);
+  state.overview = ov;
+  renderChrome(ov, state.trends.length ? state.trends : await api("/api/trends?limit=20"));
+  // Totals over the last 24 hours of runs.
+  const recent = runs.filter((r) => Date.now() - new Date(r.started_at) < 864e5);
+  const pipes = recent.filter((r) => r.task === "pipeline"), lastPipe = pipes[0];
+  const sum = (rs, key) => rs.length ? rs.reduce((a, r) => a + (Number((r.summary || {})[key]) || 0), 0) : null;
+  const collected = recent.filter((r) => r.task.startsWith("collect"))
+    .reduce((a, r) => a + Object.values(r.summary || {}).reduce((x, y) => x + (Number(y) || 0), 0), 0);
+  const steps = [
+    ["Collect", "Pull posts from every configured source", recent.length ? collected : null, "posts"],
+    ["Process", "Clean text, extract keywords, hourly counts", sum(pipes, "posts_processed"), "posts"],
+    ["Detect", "Spikes vs. each term's own baseline", ov.counts.trends_active, "active"],
+    ["Predict", "Score momentum & virality", sum(pipes, "trends_scored"), "scores"],
+    ["Insight", "Content ideas for strong trends", sum(pipes, "ideas_generated"), "ideas"],
+    ["Notify", "Slack · Discord · email · console", sum(pipes, "alerts_sent"), "alerts"],
+  ];
+  $("stepsSub").textContent = lastPipe ? `Last 24 hours · ${pipes.length} pipeline run${pipes.length === 1 ? "" : "s"} · latest ${ago(lastPipe.started_at)}`
+                                       : "No pipeline runs in the last 24 hours";
+  $("steps").innerHTML = steps.map(([n, d, v, u], i) => `
+    <div class="step ${v ? "on" : ""}"><div class="n">${i + 1}</div><div class="name">${n}</div><div class="desc">${d}</div>
+      <div class="val">${v == null ? "–" : fmt(v)}<small>${u}</small></div></div>`).join("");
+
+  $("runsTable").innerHTML = runs.map((r) => {
+    const sum = r.summary || {};
+    const res = r.task === "pipeline"
+      ? `${fmt(sum.posts_processed)} posts → ${fmt(sum.trends_detected)} trends → ${fmt(sum.alerts_sent)} alerts`
+      : Object.entries(sum).map(([k, v]) => `${PLATFORM[k] || k}: ${fmt(v)}`).join(", ");
+    const st = r.status === "success" ? `<span class="status" style="color:#4d7c0f">${ICON.check} success</span>`
+      : r.status === "running" ? `<span class="status">● running</span>` : `<span class="status" style="color:#b3261e" title="${esc(r.error)}">✕ failed</span>`;
+    return `<tr><td><b>${esc(r.task.replace("collect:", "collect · "))}</b></td><td><span class="chip">${esc(r.trigger)}</span></td>
+      <td style="white-space:nowrap">${dayClock(r.started_at)}</td><td class="num">${r.duration_s == null ? "–" : r.duration_s.toFixed(1) + "s"}</td>
+      <td style="color:var(--ink-2)">${esc(res)}</td><td>${st}</td></tr>`;
+  }).join("") || `<tr><td colspan="6"><div class="empty">No runs yet</div></td></tr>`;
+
+  const yes = (on, label) => `<span class="status" style="color:${on ? "#4d7c0f" : "var(--muted)"}"><span class="dot ${on ? "" : "off"}" style="width:7px;height:7px"></span>${label}</span>`;
+  $("sources").innerHTML = [
+    ["Reddit", ov.sources.reddit], ["X / Twitter", ov.sources.twitter], ["YouTube", ov.sources.youtube],
+    ["Google Trends", ov.sources.google_trends], ["Demo feed", ov.sources.demo],
+  ].map(([k, on]) => `<div class="kv"><span>${k}</span>${yes(on, on ? "active" : "not configured")}</div>`).join("");
+  $("channels").innerHTML = [
+    ["Slack", ov.channels.slack], ["Discord", ov.channels.discord], ["Email", ov.channels.email], ["OpenAI (ideas)", ov.channels.openai],
+  ].map(([k, on]) => `<div class="kv"><span>${k}</span>${yes(on, on ? "connected" : "not set")}</div>`).join("") +
+    `<div class="card-sub" style="margin-top:10px">Add keys in <code>.env</code> and restart to enable.</div>`;
+  const d = cfg.settings.detection;
+  $("schedule").innerHTML = cfg.schedule.map((j) => `<div class="kv"><span>${esc(j.job.replace(/-/g, " "))}</span><b>every ${j.every_minutes} min</b></div>`).join("") +
+    `<div class="kv"><span>Alert at</span><b>score ≥ ${ov.thresholds.trend_score} · virality ≥ ${ov.thresholds.virality}%</b></div>
+     <div class="kv"><span>Spike rule</span><b>z ≥ ${d.z_score_threshold} or ×${d.growth_ratio_threshold}</b></div>
+     <div class="kv"><span>Windows</span><b>${d.current_window_hours}h vs ${d.baseline_window_hours}h baseline</b></div>`;
+}
+
+/* ---------------- alerts page ---------------- */
+async function loadAlerts() {
+  const [ov, alerts, ideas] = await Promise.all([api("/api/overview"), api("/api/alerts?limit=100"), api("/api/ideas?limit=60")]);
+  state.overview = ov;
+  renderChrome(ov, state.trends.length ? state.trends : await api("/api/trends?limit=20"));
+  $("alertsSub").textContent = `${fmt(alerts.length)} most recent · ${ov.counts.alerts_24h} in the last 24h`;
+  $("alertsFull").innerHTML = alerts.map((a) => `
+    <div class="list-item" style="cursor:pointer" onclick="openTrend(${a.trend_id})">
+      <div class="li-ico dark">${ICON.bell("#cdf264")}</div>
+      <div class="li-main"><div class="li-title">${esc(cap(a.trend_name))}</div>
+        <div class="li-sub">Score ${pct(a.score_at_alert)} · virality ${pct(a.virality_at_alert)}% · ${(a.platforms || []).map((p) => PLATFORM[p] || p).join(", ")}</div>
+        <div class="chips">${(a.channels_sent || []).map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div></div>
+      <div class="li-right">${dayClock(a.alerted_at)}</div>
+    </div>`).join("") || `<div class="empty">No alerts yet. A trend needs score ≥ ${ov.thresholds.trend_score} and virality ≥ ${ov.thresholds.virality}%.</div>`;
+  $("ideasFull").innerHTML = ideas.map((c) => ideaCard(c, true)).join("") || `<div class="empty">No content ideas yet</div>`;
+}
+
+function ideaCard(c, withTrend) {
+  const text = `${c.hook}\n\n${c.suggested_caption}\n\n${(c.suggested_hashtags || []).join(" ")}`;
+  return `<div class="list-item">
+    <div class="li-ico lime">${ICON.bulb()}</div>
+    <div class="li-main">
+      <div style="display:flex;justify-content:space-between;gap:10px">
+        <div class="li-title">${withTrend ? esc(cap(c.trend_name)) + " · " : ""}${esc(c.suggested_format)}</div>
+        <button class="chip" onclick="event.stopPropagation();copyText(${esc(JSON.stringify(text))})">Copy</button>
+      </div>
+      <div style="font-weight:600;margin-top:6px">“${esc(c.hook)}”</div>
+      <div class="li-sub" style="line-height:1.5">${esc(c.suggested_caption)}</div>
+      <div class="chips">${(c.suggested_hashtags || []).map((h) => `<span class="chip">${esc(h)}</span>`).join("")}
+        <span class="chip" style="background:none;color:var(--muted)">${esc(c.generator || "")} · ${ago(c.generated_at)}</span></div>
+    </div></div>`;
+}
+
+function copyText(t) {
+  navigator.clipboard?.writeText(t).then(() => toast("Copied to clipboard"), () => toast("Copy failed"));
+}
+
+/* ---------------- trend drawer ---------------- */
+async function openTrend(id) {
+  const d = await api(`/api/trends/${id}`);
+  const t = d.trend, p = d.predictions[0] || {};
+  const series = d.series.map((m) => Number(m.mentions));
+  const max = Math.max(...series, 1), W = 560, H = 160, bw = W / Math.max(series.length, 1);
+  const bars = series.map((v, i) => `<rect x="${i * bw + 2}" y="${H - (v / max) * (H - 8)}" width="${Math.max(bw - 4, 1)}" height="${(v / max) * (H - 8)}"
+      rx="${Math.min((bw - 4) / 2, 5)}" fill="${i >= series.length - 3 ? "#cdf264" : "#111210"}"><title>${clock(d.series[i].timestamp)}: ${v}</title></rect>`).join("");
+  const hist = [...d.predictions].reverse();
+  const histPts = hist.map((h, i) => `${(i * (W / Math.max(hist.length - 1, 1))).toFixed(1)},${(70 - (h.virality_probability / 100) * 64).toFixed(1)}`).join(" ");
+  $("drawer").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="pill" style="background:#fff">${esc(t.source.replace("_", " "))} · detected ${dayClock(t.detected_at)}</span>
+      <button class="icon-btn" onclick="closeDrawer()" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <h2>${esc(cap(t.trend_name))}</h2>
+    <div class="sub">${esc(t.description || "")}</div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px">
+      ${[["Score", pct(p.trend_score), "dark"], ["Virality", pct(p.virality_probability) + "%", "lime"],
+         ["Momentum", p.trend_momentum == null ? "–" : (p.trend_momentum >= 0 ? "+" : "") + p.trend_momentum.toFixed(2), ""],
+         ["Lifespan", p.estimated_lifespan_days ? "~" + p.estimated_lifespan_days + "d" : "–", ""]]
+        .map(([k, v, c]) => `<div class="card ${c}" style="padding:16px;margin:0;border-radius:22px"><div class="card-sub" style="margin:0;${c === "dark" ? "color:#a3a79d" : c === "lime" ? "color:#2a2c27" : ""}">${k}</div>
+          <div style="font-size:26px;font-weight:700;letter-spacing:-.6px;margin-top:6px">${v}</div></div>`).join("")}
+    </div>
+    <div class="card"><div class="card-head" style="margin-bottom:10px"><div><div class="card-title">Mentions per hour</div><div class="card-sub">Last ${series.length}h · lime = current window</div></div>
+      <b style="font-size:20px">${fmt(series.slice(-3).reduce((a, b) => a + b, 0))}<span class="card-sub"> / 3h</span></b></div>
+      <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:160px">${bars}</svg></div>
+    ${hist.length > 1 ? `<div class="card"><div class="card-head" style="margin-bottom:8px"><div><div class="card-title">Virality over time</div><div class="card-sub">${hist.length} predictions</div></div></div>
+      <svg width="100%" viewBox="0 0 ${W} 72" preserveAspectRatio="none" style="height:72px"><polyline points="${histPts}" fill="none" stroke="#111210" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div>` : ""}
+    ${d.ideas.length ? `<div class="card"><div class="card-head" style="margin-bottom:6px"><div class="card-title">Content idea</div></div>${ideaCard({ ...d.ideas[0], trend_name: t.trend_name }, false)}</div>` : ""}
+    <div class="card"><div class="card-head" style="margin-bottom:6px"><div><div class="card-title">Top posts</div><div class="card-sub">By engagement</div></div></div>
+      ${d.posts.map((p) => `<div class="list-item"><span class="chip ${p.platform === "reddit" ? "dark" : ""}" style="flex:none">${PLATFORM[p.platform] || esc(p.platform)}</span>
+        <div class="li-main"><div class="li-title" style="font-weight:500">${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(p.text)}</a>` : esc(p.text)}</div>
+        <div class="li-sub">${fmt(p.likes)} likes · ${fmt(p.comments)} comments · ${ago(p.posted_at)}</div></div></div>`).join("") || `<div class="empty">No related posts</div>`}
+    </div>
+    ${d.alerts.length ? `<div class="card"><div class="card-title" style="margin-bottom:10px">Alerts</div>${d.alerts.map((a) =>
+      `<div class="kv"><span>${dayClock(a.alerted_at)}</span><b>${(a.channels_sent || []).join(", ")}</b></div>`).join("")}</div>` : ""}`;
+  $("drawer").classList.add("open"); $("scrim").classList.add("open");
+}
+function closeDrawer() { $("drawer").classList.remove("open"); $("scrim").classList.remove("open"); }
+document.addEventListener("keydown", (e) => e.key === "Escape" && closeDrawer());
+
+/* ---------------- run pipeline ---------------- */
+function setRunning(on) {
+  const b = $("runBtn");
+  b.disabled = on; b.classList.toggle("running", on);
+  $("runLabel").textContent = on ? "Running…" : "Run pipeline";
+}
+async function runPipeline() {
+  try {
+    await api("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task: "all" }) });
+    setRunning(true); toast("Collecting data and running the pipeline…");
+    const poll = setInterval(async () => {
+      const s = await api("/api/run").catch(() => ({ running: false }));
+      if (!s.running) { clearInterval(poll); setRunning(false); toast(`${ICON.check} Pipeline finished`); refresh(); }
+    }, 1500);
+  } catch (e) {
+    toast(e.status === 409 ? "A run is already in progress" : "Could not start run: " + esc(e.message));
+  }
+}
+
+/* ---------------- routing ---------------- */
+const loaders = { overview: loadOverview, trends: loadTrends, datasets: loadDatasets, pipeline: loadPipeline, alerts: loadAlerts };
+async function refresh() {
+  try { await loaders[state.page](); }
+  catch (e) {
+    banner(e.status === 503 ? "Can't reach the database. Is PostgreSQL running? (docker compose up -d db)"
+                            : "Couldn't load data: " + e.message);
+    $("modeChip").innerHTML = `<span class="dot off"></span><span class="txt">Offline</span>`;
+  }
+}
+function route() {
+  state.page = (location.hash || "#overview").slice(1);
+  if (!loaders[state.page]) state.page = "overview";
+  document.querySelectorAll("[data-view]").forEach((s) => s.classList.toggle("hide", s.dataset.view !== state.page));
+  document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("active", a.dataset.page === state.page));
+  closeDrawer(); refresh(); window.scrollTo({ top: 0 });
+}
+window.addEventListener("hashchange", route);
+
+function segControl(id, onChange) {
+  $(id).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    $(id).querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    onChange(b.dataset.v);
+  });
+}
+segControl("platformFilter", (v) => { state.platform = v; state.postsPage = 0; loadDatasets(); });
+segControl("kwMode", (v) => { state.kwExclude = v === "1"; loadDatasets(); });
+segControl("trendFilter", (v) => { state.trendScope = v; loadTrends(); });
+let qTimer;
+$("q").addEventListener("input", (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { state.q = e.target.value.trim(); state.postsPage = 0; loadDatasets(); }, 300); });
+$("prevPage").onclick = () => { state.postsPage = Math.max(0, state.postsPage - 1); loadDatasets(); };
+$("nextPage").onclick = () => { state.postsPage += 1; loadDatasets(); };
+
+route();
+setInterval(() => { if (!document.hidden && !$("drawer").classList.contains("open")) refresh(); }, 30000);
+</script>
+</body>
+</html>

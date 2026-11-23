@@ -20,6 +20,23 @@ where new topics rise and fade over time, so every stage produces real output.
 Celery Beat (or the built-in APScheduler loop) runs collection and the pipeline on the intervals in
 `config/config.yaml`. See [docs/architecture.md](docs/architecture.md) for details.
 
+## Dashboard
+
+A web dashboard at **http://localhost:8000** shows everything the platform produces:
+
+* **Overview**: a gauge for the top trend's virality, trend-strength bars, pipeline health, the trending-now list
+  with platform split, a 3-hour momentum dot chart, the latest alerts and content ideas, rising keywords, and
+  hourly data intake.
+* **Trends**: every trend with sparkline, score, virality, momentum and lifespan. Click a trend for details:
+  mentions per hour, virality history, content idea and top posts.
+* **Datasets**: browse and search collected posts by platform and keyword.
+* **Pipeline**: totals for each stage over the last 24h, run history, data sources, alert channels and schedule.
+* **Alerts**: the alert log, plus content ideas with copy-to-clipboard.
+
+The **Run pipeline** button collects data and runs the full pipeline on demand. The page refreshes every 30
+seconds. It is one static file (`web/index.html`, no build step) served by a FastAPI app (`api/server.py`), whose
+JSON API is documented at http://localhost:8000/docs.
+
 ## Quick start (Docker)
 
 ```bash
@@ -28,8 +45,8 @@ docker compose up -d --build
 docker compose logs -f worker
 ```
 
-This starts PostgreSQL, Redis, a one-off `migrate` job (creates or upgrades the schema), a Celery worker and Celery
-Beat. With no keys, demo data arrives every 5 minutes and the pipeline runs every 15. Alerts print in the worker log.
+This starts PostgreSQL, Redis, a one-off `migrate` job (creates or upgrades the schema), a Celery worker, Celery
+Beat and the dashboard (http://localhost:8000). With no keys, demo data arrives every 5 minutes and the pipeline runs every 15. Alerts print in the worker log.
 
 Requires Docker Compose v2.24+ (for the optional `.env` file). To include Prophet/BERTopic in the image:
 `docker compose build --build-arg INSTALL_ML=true`.
@@ -47,6 +64,7 @@ python main.py init-db                       # create / upgrade schema
 python main.py run-once                      # collect + full pipeline once
 python main.py report                        # show top trends
 python main.py schedule                      # run continuously (no Redis/Celery needed)
+python main.py web                           # dashboard on http://localhost:8000
 python main.py collect reddit                # one source: reddit|twitter|youtube|google_trends|demo
 ```
 

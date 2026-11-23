@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 import config
 from ai_models.prediction_model import predict_virality
+from ai_models.trend_model import complete_partial_hour, hour_fraction
 from database.db_connection import get_engine
 
 logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ class PredictionAgent:
                         continue
 
                     recent_platforms = max([p["platforms"] for p in series[-3:]] + [len(trend["platforms"] or [])])
-                    result = predict_virality(series, platform_count=recent_platforms,
+                    result = predict_virality(self.model_input(series), platform_count=recent_platforms,
                                               z_score=None, use_prophet=self.use_prophet)
                     conn.execute(INSERT_PREDICTION, {
                         "trend_id": trend["id"], "score": result["trend_score"],
@@ -109,6 +110,12 @@ class PredictionAgent:
         except Exception as e:
             logger.error("Error in prediction agent: %s", e)
         return results
+
+    @staticmethod
+    def model_input(series: List[Dict]) -> List[Dict]:
+        """Series with the still-filling current hour replaced by a trailing-60-minute estimate."""
+        mentions = complete_partial_hour([p["mentions"] for p in series], hour_fraction())
+        return [{**p, "mentions": m} for p, m in zip(series, mentions)]
 
     @staticmethod
     def _record_metrics(conn, trend_id: int, series: List[Dict]) -> None:

@@ -8,11 +8,30 @@ or several times their usual level (growth ratio).
 ``cluster_topics`` optionally groups recent posts into topics with BERTopic
 (heavy, optional dependency in requirements-ml.txt).
 """
+import datetime as dt
 import logging
 import math
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Iterable, List, Optional, Sequence
 
 logger = logging.getLogger(__name__)
+
+
+def hour_fraction(now: Optional[dt.datetime] = None) -> float:
+    """How much of the current (UTC) hour has elapsed, 0-1."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    return (now.minute * 60 + now.second) / 3600.0
+
+
+def complete_partial_hour(hourly: Sequence[float], fraction: float) -> List[float]:
+    """The newest hourly bucket is still filling up. Replace it with a trailing
+    60-minute estimate (minutes so far this hour + the matching share of the
+    previous hour), so a trend does not look like it is collapsing early in each
+    hour. Unlike scaling the partial count up, this does not amplify noise."""
+    values = [float(v) for v in hourly]
+    if len(values) < 2 or fraction >= 0.999:
+        return values
+    values[-1] = values[-1] + values[-2] * (1.0 - max(fraction, 0.0))
+    return values
 
 
 def window_stats(hourly: Sequence[float], current_hours: int) -> Dict[str, float]:

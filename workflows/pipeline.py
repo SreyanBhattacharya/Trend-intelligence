@@ -4,9 +4,11 @@
 notification once and returns a summary; the Celery tasks and the standalone
 scheduler both call these same functions.
 """
+import json
 import logging
 import os
 import sys
+from contextlib import contextmanager
 from datetime import timedelta
 from pathlib import Path
 from typing import Dict
@@ -21,18 +23,63 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 
+# --- Run log -------------------------------------------------------------------
+
+@contextmanager
+def recorded_run(task: str, trigger: str):
+    """Record a run in ``pipeline_runs``. Logging failures never break the run itself."""
+    from sqlalchemy import text
+
+    from database.db_connection import get_engine
+
+    engine, run_id, result = get_engine(), None, {}
+    try:
+        with engine.begin() as conn:
+            run_id = conn.execute(text(
+                "INSERT INTO pipeline_runs (task, trigger) VALUES (:t, :tr) RETURNING id"),
+                {"t": task, "tr": trigger}).scalar()
+    except Exception as e:
+        logger.debug("Could not record run start: %s", e)
+
+    def finish(status, summary=None, error=None):
+        if run_id is None:
+            return
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("""UPDATE pipeline_runs SET finished_at = CURRENT_TIMESTAMP, status = :s,
+                                     summary = CAST(:sum AS JSONB), error = :e WHERE id = :id"""),
+                             {"s": status, "sum": json.dumps(summary or {}), "e": error, "id": run_id})
+        except Exception as e:
+            logger.debug("Could not record run end: %s", e)
+
+    try:
+        yield result
+    except Exception as e:
+        finish("failed", result, str(e)[:2000])
+        raise
+    finish("success", result)
+
+
 # --- Plain functions -----------------------------------------------------------
 
-def collect(source: str = "all") -> Dict[str, int]:
+def collect(source: str = "all", trigger: str = "schedule") -> Dict[str, int]:
     from agents.data_collection_agent import DataCollectionAgent
 
-    agent = DataCollectionAgent()
-    if source == "all":
-        return agent.collect_all()
-    return {source: getattr(agent, f"collect_{source}")()}
+    with recorded_run(f"collect:{source}", trigger) as out:
+        agent = DataCollectionAgent()
+        result = agent.collect_all() if source == "all" else {source: getattr(agent, f"collect_{source}")()}
+        out.update(result)
+    return result
 
 
-def run_pipeline() -> Dict[str, int]:
+def run_pipeline(trigger: str = "schedule") -> Dict[str, int]:
+    with recorded_run("pipeline", trigger) as out:
+        summary = _run_pipeline()
+        out.update(summary)
+    return summary
+
+
+def _run_pipeline() -> Dict[str, int]:
     """Process -> detect -> predict -> generate insights -> notify."""
     from agents.data_processing_agent import DataProcessingAgent
     from agents.insight_agent import InsightAgent

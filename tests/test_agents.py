@@ -10,7 +10,7 @@ from agents.data_processing_agent import engagement_score, mention_bucket, post_
 from agents.insight_agent import InsightAgent, hashtag
 from agents.notification_agent import NotificationAgent
 from ai_models.prediction_model import predict_virality, simple_prediction_heuristic
-from ai_models.trend_model import detect_spikes, merge_contained, window_stats
+from ai_models.trend_model import complete_partial_hour, detect_spikes, hour_fraction, merge_contained, window_stats
 from data_processing.cleaning_pipeline import clean_text, normalize_term
 from data_processing.keyword_extraction import _fallback, extract_keywords
 from database.db_connection import normalize_url
@@ -95,6 +95,24 @@ def test_merge_contained_drops_context_fragments_but_keeps_distinct_trends():
     posts.update({100 + i: {"apple watch"} for i in range(20)})
     kept = [s["word"] for s in merge_contained(spikes, posts)]
     assert kept == ["solar balcony kits", "apple watch"]
+
+
+def test_partial_current_hour_uses_trailing_60_minutes():
+    assert complete_partial_hour([10, 20, 10], fraction=0.5) == [10, 20, 20]
+    assert complete_partial_hour([10, 20, 2], fraction=0.1) == [10, 20, 20]
+    assert complete_partial_hour([10, 20, 30], fraction=1.0) == [10, 20, 30]
+    assert hour_fraction(dt.datetime(2026, 1, 1, 5, 30, tzinfo=dt.timezone.utc)) == 0.5
+
+
+def test_prediction_is_stable_within_the_hour():
+    full = [0] * 18 + [1, 2, 4, 6, 9, 14, 22, 33, 40]
+    probs = []
+    for minutes in (15, 30, 45, 60):
+        f = minutes / 60
+        partial = full[:-1] + [round(full[-1] * f)]
+        pts = _pts(complete_partial_hour(partial, f))
+        probs.append(predict_virality(pts, platform_count=3, use_prophet=False)["virality_probability"])
+    assert max(probs) - min(probs) < 10, probs
 
 
 # --- prediction ---------------------------------------------------------------

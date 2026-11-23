@@ -24,4 +24,5 @@ COPY . .
 RUN useradd --create-home appuser && chown -R appuser /app
 USER appuser
 
+EXPOSE 8000
 CMD ["celery", "-A", "workflows.pipeline", "worker", "--loglevel=info"]

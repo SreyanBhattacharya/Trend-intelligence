@@ -21,6 +21,10 @@ celery>=5.4,<6
 redis>=5
 APScheduler>=3.10,<4
 
+# Dashboard API
+fastapi>=0.110
+uvicorn>=0.29
+
 # LLM
 openai>=1.40
 
