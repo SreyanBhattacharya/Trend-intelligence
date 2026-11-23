@@ -15,7 +15,7 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI, HTTPException, Query  # noqa: E402
-from fastapi.responses import FileResponse, JSONResponse  # noqa: E402
+from fastapi.responses import FileResponse, JSONResponse, Response  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.exc import OperationalError  # noqa: E402
@@ -354,6 +354,21 @@ def run(req: RunRequest):
 @app.get("/api/run")
 def run_status():
     return {"running": _runner.busy}
+
+
+# --- export --------------------------------------------------------------------
+
+@app.get("/api/export.xlsx")
+def export_xlsx():
+    """All analytics in one Excel workbook (see analytics/export.py)."""
+    import io
+
+    from analytics.export import build_workbook
+
+    buf = build_workbook(io.BytesIO())
+    name = f"trend-analytics-{datetime.now(timezone.utc):%Y%m%d-%H%M}.xlsx"
+    return Response(buf.getvalue(), headers={"Content-Disposition": f'attachment; filename="{name}"'},
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 # --- alerts & ideas ------------------------------------------------------------

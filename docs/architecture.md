@@ -31,6 +31,10 @@ graph TD;
 | `engagement_metrics` | Hourly series per trend, one row per `(trend_id, hour)`. |
 | `trend_predictions` | Score history. The `latest_trend_predictions` view gives the newest row per trend. |
 | `content_ideas`, `alerts` | Generated ideas and the alert log (used for the 24h cooldown). |
+| `pipeline_runs` | Every collection / pipeline run: trigger, status, duration and JSON summary. |
+
+The **dashboard** (`web/index.html`) and **JSON API** (`api/server.py`, FastAPI) read these tables. The **Excel
+export** (`analytics/export.py`) writes all of them into one workbook. See [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md).
 
 `database/schema.sql` is idempotent and also upgrades databases created from the original schema
 (`python main.py init-db`).

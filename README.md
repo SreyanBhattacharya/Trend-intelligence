@@ -6,6 +6,18 @@ their momentum and virality, generates content ideas, and sends alerts.
 It runs out of the box with **no API keys**: if no data source is configured, it uses a built-in synthetic feed
 where new topics rise and fade over time, so every stage produces real output.
 
+## Documentation
+
+| Doc | Read it for |
+|---|---|
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | step-by-step: start, stop, add API keys, tune, update, test, troubleshoot |
+| [docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md) | how everything works end to end: technologies, data sources, formulas, design decisions, interview Q&A |
+| [docs/PROJECT.md](docs/PROJECT.md) | full project description, API, data model, limitations and the **roadmap** |
+| [docs/DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md) | every dashboard page and metric, plus the Excel analytics export |
+| [docs/architecture.md](docs/architecture.md) | short architecture summary |
+
+![Dashboard](docs/images/overview.png)
+
 ## How it works
 
 | Agent | What it does |
@@ -33,7 +45,8 @@ A web dashboard at **http://localhost:8000** shows everything the platform produ
 * **Pipeline**: totals for each stage over the last 24h, run history, data sources, alert channels and schedule.
 * **Alerts**: the alert log, plus content ideas with copy-to-clipboard.
 
-The **Run pipeline** button collects data and runs the full pipeline on demand. The page refreshes every 30
+The **Run pipeline** button collects data and runs the full pipeline on demand. The **download** icon exports
+**all analytics in one Excel workbook** (10 sheets with charts; also `python main.py export`). The page refreshes every 30
 seconds. It is one static file (`web/index.html`, no build step) served by a FastAPI app (`api/server.py`), whose
 JSON API is documented at http://localhost:8000/docs.
 
@@ -65,6 +78,7 @@ python main.py run-once                      # collect + full pipeline once
 python main.py report                        # show top trends
 python main.py schedule                      # run continuously (no Redis/Celery needed)
 python main.py web                           # dashboard on http://localhost:8000
+python main.py export                        # all analytics -> trend-analytics-<time>.xlsx
 python main.py collect reddit                # one source: reddit|twitter|youtube|google_trends|demo
 ```
 

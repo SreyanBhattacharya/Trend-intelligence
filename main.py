@@ -6,6 +6,7 @@
     python main.py schedule           run continuously with the built-in scheduler (no Celery needed)
     python main.py report             show the current top trends
     python main.py web                dashboard on http://localhost:8000
+    python main.py export [PATH]      all analytics in one Excel workbook
 """
 import argparse
 import logging
@@ -73,6 +74,13 @@ def cmd_report(args):
               f"{r['estimated_lifespan_days']:4d} {r['alerts']:6d}")
 
 
+def cmd_export(args):
+    from analytics.export import build_workbook
+
+    path = build_workbook(args.path)
+    print(f"Analytics exported to {path}")
+
+
 def cmd_web(args):
     import uvicorn
 
@@ -104,6 +112,10 @@ def main(argv=None):
     p = sub.add_parser("report", help="print the top active trends")
     p.add_argument("--limit", type=int, default=20)
     p.set_defaults(func=cmd_report)
+
+    p = sub.add_parser("export", help="export all analytics to an Excel workbook")
+    p.add_argument("path", nargs="?", default=None, help="output .xlsx path (default: trend-analytics-<time>.xlsx)")
+    p.set_defaults(func=cmd_export)
 
     p = sub.add_parser("web", help="serve the dashboard")
     p.add_argument("--host", default="127.0.0.1")

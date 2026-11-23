@@ -86,3 +86,28 @@ def test_run_endpoint(client):
     tasks = {r["task"]: r for r in client.get("/api/runs").json()}
     assert tasks["pipeline"]["trigger"] == "dashboard" and tasks["pipeline"]["status"] == "success"
     assert tasks["collect:all"]["summary"]["demo"] > 0
+
+
+def test_analytics_export(client, seeded, tmp_path):
+    from openpyxl import load_workbook
+
+    r = client.get("/api/export.xlsx")
+    assert r.status_code == 200 and "attachment" in r.headers["content-disposition"]
+    path = tmp_path / "out.xlsx"
+    path.write_bytes(r.content)
+    wb = load_workbook(path)
+    assert wb.sheetnames == ["Summary", "Trends", "Trend history", "Predictions", "Alerts", "Content ideas",
+                             "Keywords", "Activity", "Posts", "Pipeline runs"]
+    assert wb["Summary"]._charts and wb["Activity"]._charts
+    trends = wb["Trends"]
+    assert trends["B3"].value == "Trend" and trends["B4"].value == seeded  # top trend first
+    assert wb["Alerts"].max_row >= 4 and wb["Posts"].max_row > 100
+
+
+def test_export_on_empty_database(db, tmp_path):
+    from openpyxl import load_workbook
+
+    from analytics.export import build_workbook
+
+    out = build_workbook(tmp_path / "empty.xlsx")
+    assert load_workbook(out)["Summary"]["B5"].value == 0
