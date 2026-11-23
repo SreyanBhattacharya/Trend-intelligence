@@ -1,0 +1,11 @@
+# Optional ML extras. The platform runs without them; when installed they are
+# used automatically.
+#   prophet  -> 24h forecast blended into the virality prediction
+#   bertopic -> topic clustering (enable with detection.topic_clustering: true)
+#   pytrends -> fallback Google Trends client (the RSS feed is used first)
+-r requirements.txt
+prophet>=1.1.5
+bertopic>=0.16
+scikit-learn>=1.3
+pytrends>=4.9
+playwright>=1.40

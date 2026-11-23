@@ -1,106 +1,127 @@
-import os
-import yaml
-import logging
-from celery import Celery
-from celery.schedules import crontab
+"""Pipeline orchestration: plain functions plus Celery tasks/beat schedule.
 
-# Configure logging specifically for Celery workers
+``run_pipeline`` runs processing -> detection -> prediction -> insight ->
+notification once and returns a summary; the Celery tasks and the standalone
+scheduler both call these same functions.
+"""
+import logging
+import os
+import sys
+from datetime import timedelta
+from pathlib import Path
+from typing import Dict
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from celery import Celery  # noqa: E402
+
+import config  # noqa: E402
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Initialize Celery app
+
+# --- Plain functions -----------------------------------------------------------
+
+def collect(source: str = "all") -> Dict[str, int]:
+    from agents.data_collection_agent import DataCollectionAgent
+
+    agent = DataCollectionAgent()
+    if source == "all":
+        return agent.collect_all()
+    return {source: getattr(agent, f"collect_{source}")()}
+
+
+def run_pipeline() -> Dict[str, int]:
+    """Process -> detect -> predict -> generate insights -> notify."""
+    from agents.data_processing_agent import DataProcessingAgent
+    from agents.insight_agent import InsightAgent
+    from agents.notification_agent import NotificationAgent
+    from agents.prediction_agent import PredictionAgent
+    from agents.trend_detection_agent import TrendDetectionAgent
+
+    logger.info("Starting core pipeline execution...")
+    summary = {
+        "posts_processed": DataProcessingAgent().process_unprocessed_posts(),
+        "trends_detected": len(TrendDetectionAgent().detect_trends()),
+        "trends_scored": len(PredictionAgent().predict_trends()),
+        "ideas_generated": len(InsightAgent().generate_insights()),
+        "alerts_sent": len(NotificationAgent().check_and_notify()),
+    }
+    logger.info("Core pipeline finished: %s", summary)
+    return summary
+
+
+# --- Celery --------------------------------------------------------------------
+
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 app = Celery("trend_pipeline", broker=REDIS_URL, backend=REDIS_URL)
-
 app.conf.update(
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    worker_concurrency=2, # Simple setup
+    worker_concurrency=2,
+    result_expires=3600,
+    broker_connection_retry_on_startup=True,
 )
 
-# Load dynamic schedule intervals from config if present
-reddit_interval = 10
-twitter_interval = 5
-google_interval = 60
-pipeline_interval = 15
 
-try:
-    with open("config/config.yaml", "r") as f:
-        config = yaml.safe_load(f)
-        sched = config.get("platform_settings", {}).get("scheduling", {})
-        reddit_interval = sched.get("reddit_scan_interval_minutes", 10)
-        twitter_interval = sched.get("twitter_scan_interval_minutes", 5)
-        google_interval = sched.get("google_trends_scan_interval_minutes", 60)
-        pipeline_interval = sched.get("pipeline_process_interval_minutes", 15)
-        
-        platforms_config = config.get("platform_settings", {}).get("data_collection", {})
-        subreddits = platforms_config.get("reddit_subreddits", ["technology", "startups"])
-        keywords = platforms_config.get("twitter_keywords", ["AI", "machine learning"])
-except Exception as e:
-    logger.warning(f"Failed to load config.yaml for Celery, using defaults: {e}")
-    subreddits = ["technology", "startups"]
-    keywords = ["AI", "tech"]
-
-app.conf.beat_schedule = {
-    'collect-reddit-data': {
-        'task': 'workflows.pipeline.run_reddit_collection',
-        'schedule': crontab(minute=f'*/{reddit_interval}'),
-    },
-    'collect-twitter-data': {
-        'task': 'workflows.pipeline.run_twitter_collection',
-        'schedule': crontab(minute=f'*/{twitter_interval}'),
-    },
-    'run-main-processing-pipeline': {
-        'task': 'workflows.pipeline.run_core_pipeline',
-        'schedule': crontab(minute=f'*/{pipeline_interval}'),
-    },
-}
-
-# --- Tasks ---
-
-@app.task
+@app.task(name="workflows.pipeline.run_reddit_collection")
 def run_reddit_collection():
-    from agents.data_collection_agent import DataCollectionAgent
-    agent = DataCollectionAgent()
-    agent.collect_reddit(subreddits)
+    return collect("reddit")
 
-@app.task
+
+@app.task(name="workflows.pipeline.run_twitter_collection")
 def run_twitter_collection():
-    from agents.data_collection_agent import DataCollectionAgent
-    agent = DataCollectionAgent()
-    agent.collect_twitter(keywords)
+    return collect("twitter")
 
-@app.task
+
+@app.task(name="workflows.pipeline.run_youtube_collection")
+def run_youtube_collection():
+    return collect("youtube")
+
+
+@app.task(name="workflows.pipeline.run_google_trends_collection")
+def run_google_trends_collection():
+    return collect("google_trends")
+
+
+@app.task(name="workflows.pipeline.run_demo_collection")
+def run_demo_collection():
+    return collect("demo")
+
+
+@app.task(name="workflows.pipeline.run_core_pipeline")
 def run_core_pipeline():
-    """Run the chain of processing, detection, prediction, insight, and notification."""
-    logger.info("Starting primary core pipeline execution...")
-    
-    # 1. Processing
-    from agents.data_processing_agent import DataProcessingAgent
-    proc = DataProcessingAgent()
-    proc.process_unprocessed_posts()
-    
-    # 2. Detection
-    from agents.trend_detection_agent import TrendDetectionAgent
-    detect = TrendDetectionAgent()
-    detect.detect_trends()
-    
-    # 3. Prediction
-    from agents.prediction_agent import PredictionAgent
-    pred = PredictionAgent()
-    pred.predict_trends()
-    
-    # 4. Insight Generation
-    from agents.insight_agent import InsightAgent
-    insight = InsightAgent()
-    insight.generate_insights()
-    
-    # 5. Notification
-    from agents.notification_agent import NotificationAgent
-    notify = NotificationAgent()
-    notify.check_and_notify()
-    
-    logger.info("Primary core pipeline execution finished.")
+    return run_pipeline()
+
+
+def schedule_plan() -> Dict[str, Dict]:
+    """Which collection jobs to run and how often (minutes). Shared by Celery beat and APScheduler."""
+    s = config.section("scheduling")
+    plan = {"run-core-pipeline": {"task": run_core_pipeline,
+                                  "minutes": s.get("pipeline_process_interval_minutes", 15)}}
+    if config.demo_mode_enabled():
+        plan["collect-demo-data"] = {"task": run_demo_collection, "minutes": s.get("demo_scan_interval_minutes", 5)}
+    else:
+        if config.env("REDDIT_CLIENT_ID"):
+            plan["collect-reddit-data"] = {"task": run_reddit_collection,
+                                           "minutes": s.get("reddit_scan_interval_minutes", 10)}
+        if config.env("TWITTER_BEARER_TOKEN"):
+            plan["collect-twitter-data"] = {"task": run_twitter_collection,
+                                            "minutes": s.get("twitter_scan_interval_minutes", 15)}
+        if config.env("YOUTUBE_API_KEY"):
+            plan["collect-youtube-data"] = {"task": run_youtube_collection,
+                                            "minutes": s.get("youtube_scan_interval_minutes", 30)}
+        plan["collect-google-trends"] = {"task": run_google_trends_collection,  # no key needed
+                                         "minutes": s.get("google_trends_scan_interval_minutes", 60)}
+    return plan
+
+
+# timedelta schedules work for any interval (crontab '*/60' is invalid).
+app.conf.beat_schedule = {
+    name: {"task": job["task"].name, "schedule": timedelta(minutes=float(job["minutes"]))}
+    for name, job in schedule_plan().items()
+}

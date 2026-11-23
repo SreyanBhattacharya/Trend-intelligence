@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
@@ -9,45 +9,48 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        # Need to install spacy model for tests
-        python -m spacy download en_core_web_sm
-        
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-        
-    - name: Test with pytest
-      run: |
-        pytest tests/
 
-  deploy:
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: trend_user
+          POSTGRES_PASSWORD: trend_password
+          POSTGRES_DB: trend_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U trend_user -d trend_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://trend_user:trend_password@localhost:5432/trend_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          python -m spacy download en_core_web_sm
+
+      - name: Lint
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --statistics
+
+      - name: Test (unit + Postgres integration)
+        run: pytest -v
+
+  docker:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Deploy Placeholder
-      run: |
-        echo "Deployment step logic goes here"
-        # Example: docker-compose up -d --build
-        # Example: docker push my-image:latest
-
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t trend-intelligence:ci .

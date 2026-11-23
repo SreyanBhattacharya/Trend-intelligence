@@ -1,59 +1,43 @@
-import os
-import sys
+"""Standalone scheduler for local runs without Celery/Redis.
+
+    python workflows/scheduler.py      (or: python main.py schedule)
+
+Runs every job once at start-up, then on the intervals from config.yaml.
+"""
+import datetime as dt
 import logging
-import time
-import yaml
-
-# Ensure project root is in sys.path so imports like 'workflows' resolve correctly
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
 import sys
-import os
+from pathlib import Path
 
-# Add the project directory to sys.path so the 'workflows' package can be found
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from workflows.pipeline import run_reddit_collection, run_twitter_collection, run_core_pipeline
+from workflows.pipeline import schedule_plan  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
-# This serves as a standalone local lightweight scheduler fallback 
-# if the Celery Beat worker isn't preferred for simple local testing.
-# Best run via APScheduler.
 
 def main():
     try:
         from apscheduler.schedulers.blocking import BlockingScheduler
     except ImportError:
-        logger.error("APScheduler not installed. Please install it or use celery beat (docker-compose).")
+        logger.error("APScheduler not installed. Run 'pip install apscheduler' or use Celery (docker-compose).")
         return
-        
-    logger.info("Starting standalone APScheduler...")
-    scheduler = BlockingScheduler()
-    
-    reddit_interval = 10
-    twitter_interval = 5
-    pipeline_interval = 15
-    
-    try:
-        with open("config/config.yaml", "r") as f:
-            config = yaml.safe_load(f)
-            sched = config.get("platform_settings", {}).get("scheduling", {})
-            reddit_interval = sched.get("reddit_scan_interval_minutes", 10)
-            twitter_interval = sched.get("twitter_scan_interval_minutes", 5)
-            pipeline_interval = sched.get("pipeline_process_interval_minutes", 15)
-    except Exception:
-        pass
 
-    scheduler.add_job(run_reddit_collection, 'interval', minutes=reddit_interval)
-    scheduler.add_job(run_twitter_collection, 'interval', minutes=twitter_interval)
-    scheduler.add_job(run_core_pipeline, 'interval', minutes=pipeline_interval)
-    
-    logger.info("Scheduler jobs added. Running...")
-    scheduler.start()
+    scheduler = BlockingScheduler(timezone="UTC")
+    now = dt.datetime.now(dt.timezone.utc)
+    for i, (name, job) in enumerate(sorted(schedule_plan().items(), key=lambda kv: kv[0] == "run-core-pipeline")):
+        # Collect first, then run the pipeline shortly after start-up.
+        scheduler.add_job(job["task"], "interval", minutes=float(job["minutes"]), id=name, name=name,
+                          next_run_time=now + dt.timedelta(seconds=5 * i), max_instances=1, coalesce=True)
+        logger.info("Scheduled %s every %s min", name, job["minutes"])
+
+    logger.info("Scheduler running. Press Ctrl+C to stop.")
+    try:
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Scheduler stopped.")
+
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     main()

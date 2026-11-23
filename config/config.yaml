@@ -1,14 +1,33 @@
 platform_settings:
   data_collection:
     reddit_subreddits: ["technology", "programming", "marketing", "startups"]
+    reddit_posts_per_subreddit: 25
     twitter_keywords: ["AI", "machine learning", "crypto", "trend"]
-  
+    twitter_results_per_keyword: 20   # X API allows 10-100
+    youtube_region: "US"
+    youtube_max_results: 30
+    google_trends_geo: "US"
+
+  detection:
+    current_window_hours: 3        # "now" window compared against the baseline
+    baseline_window_hours: 24      # history used to compute the normal level
+    min_mentions: 5                # ignore terms mentioned less than this in the current window
+    z_score_threshold: 2.5         # how unusual the current window must be
+    growth_ratio_threshold: 3.0    # ...or how many times bigger than the baseline average
+    max_trends_per_run: 25
+    trend_inactive_after_hours: 48
+
   thresholds:
+    # Both scores are on a 0-100 scale (fractions like 0.7 are also accepted).
     trend_score_alert_threshold: 80
-    virality_probability_alert_threshold: 0.70
+    virality_probability_alert_threshold: 70
+    insight_virality_threshold: 60   # generate content ideas above this
+    alert_cooldown_hours: 24
 
   scheduling:
     reddit_scan_interval_minutes: 10
-    twitter_scan_interval_minutes: 5
+    twitter_scan_interval_minutes: 15
+    youtube_scan_interval_minutes: 30
     google_trends_scan_interval_minutes: 60
+    demo_scan_interval_minutes: 5
     pipeline_process_interval_minutes: 15

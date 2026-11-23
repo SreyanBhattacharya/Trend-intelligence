@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Secrets
+.env
+
+# Celery
+celerybeat-schedule*
+
+# Editors / OS
+.idea/
+.DS_Store
